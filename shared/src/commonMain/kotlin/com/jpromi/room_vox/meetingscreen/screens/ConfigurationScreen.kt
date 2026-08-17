@@ -1,15 +1,20 @@
 package com.jpromi.room_vox.meetingscreen.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -17,7 +22,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jpromi.room_vox.meetingscreen.AppSettings
-import com.jpromi.room_vox.meetingscreen.network.ServerConnectionChecker
+import com.jpromi.room_vox.meetingscreen.models.Room
+import com.jpromi.room_vox.meetingscreen.network.RoomVoxService
+import com.jpromi.room_vox.meetingscreen.network.RoomsResult
 import com.jpromi.room_vox.meetingscreen.network.ServerConnectionResult
 import kotlinx.coroutines.launch
 
@@ -25,13 +32,17 @@ import kotlinx.coroutines.launch
 fun ConfigurationScreen(
     onGoBack: () -> Unit,
     appSettings: AppSettings = remember { AppSettings() },
-    serverConnectionChecker: ServerConnectionChecker = remember { ServerConnectionChecker() },
+    roomVoxService: RoomVoxService = remember { RoomVoxService(appSettings) },
 ) {
     var serverUrl by remember { mutableStateOf(appSettings.serverUrl) }
     var accessToken by remember { mutableStateOf(appSettings.accessToken) }
     var serverCheckResult by remember { mutableStateOf<ServerConnectionResult?>(null) }
     var isCheckingServer by remember { mutableStateOf(false) }
+    var isRoomMenuExpanded by remember { mutableStateOf(false) }
+    var selectedRoomId by remember { mutableStateOf(appSettings.selectedRoomId) }
     val coroutineScope = rememberCoroutineScope()
+
+    val rooms = remember { mutableStateListOf<Room>() }
 
     Column(
         modifier = Modifier
@@ -75,10 +86,44 @@ fun ConfigurationScreen(
                 coroutineScope.launch {
                     isCheckingServer = true
                     serverCheckResult = null
-                    serverCheckResult = serverConnectionChecker.check(
-                        serverUrl = serverUrl,
-                        accessToken = accessToken,
-                    )
+                    serverCheckResult = when (val result = roomVoxService.getRooms()) {
+                        is RoomsResult.Success -> {
+                            rooms.clear()
+                            rooms.addAll(result.rooms)
+                            if (rooms.none { it.id == selectedRoomId }) {
+                                selectedRoomId = ""
+                                appSettings.selectedRoomId = ""
+                            }
+                            ServerConnectionResult.Success(
+                                "Verbindung OK. ${rooms.size} Räume gefunden."
+                            )
+                        }
+                        RoomsResult.InvalidConfiguration -> {
+                            ServerConnectionResult.Error("Bitte Server-URL eingeben.")
+                        }
+                        RoomsResult.Unauthorized -> {
+                            // Hier kann z. B. ein Login-Dialog geöffnet werden.
+                            ServerConnectionResult.Error("Der Access Token ist ungültig.")
+                        }
+                        RoomsResult.Forbidden -> {
+                            // Hier kann z. B. auf fehlende Berechtigungen hingewiesen werden.
+                            ServerConnectionResult.Error("Keine Berechtigung zum Abrufen der Räume.")
+                        }
+                        RoomsResult.NotFound -> {
+                            // Hier kann z. B. eine abweichende Server-URL vorgeschlagen werden.
+                            ServerConnectionResult.Error("Die RoomVox-API wurde auf diesem Server nicht gefunden.")
+                        }
+                        is RoomsResult.HttpError -> {
+                            ServerConnectionResult.Error(
+                                "Serverfehler ${result.statusCode}: ${result.message}"
+                            )
+                        }
+                        is RoomsResult.NetworkError -> {
+                            ServerConnectionResult.Error(
+                                result.cause.message ?: "Server nicht erreichbar."
+                            )
+                        }
+                    }
                     isCheckingServer = false
                 }
             },
@@ -99,6 +144,42 @@ fun ConfigurationScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        if (rooms.isNotEmpty()) {
+            val selectedRoom = rooms.firstOrNull { it.id == selectedRoomId }
+
+            Text("Verfügbarer Raum:")
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { isRoomMenuExpanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(selectedRoom?.name ?: "Raum auswählen")
+                }
+
+                DropdownMenu(
+                    expanded = isRoomMenuExpanded,
+                    onDismissRequest = { isRoomMenuExpanded = false },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    rooms.forEach { room ->
+                        DropdownMenuItem(
+                            text = { Text("${room.name} (ID: ${room.id})") },
+                            onClick = {
+                                selectedRoomId = room.id
+                                appSettings.selectedRoomId = room.id
+                                isRoomMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         Button(onClick = onGoBack) {
             Text("Zurueck")
