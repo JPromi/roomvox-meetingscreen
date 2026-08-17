@@ -4,11 +4,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 import com.jpromi.room_vox.meetingscreen.screens.ConfigurationScreen
-import com.jpromi.room_vox.meetingscreen.screens.HomeScreen
 import com.jpromi.room_vox.meetingscreen.screens.RoomScreen
 
 private enum class Screen {
-    Home,
     Configuration,
     Room
 }
@@ -17,18 +15,14 @@ private enum class Screen {
 @Preview
 fun App() {
     MaterialTheme {
-        var currentScreen by remember { mutableStateOf(Screen.Home) }
+        var currentScreen by remember { mutableStateOf(Screen.Room) }
 
         when (currentScreen) {
-            Screen.Home -> HomeScreen(
-                onOpenConfiguration = { currentScreen = Screen.Configuration },
-                onOpenRoom = { currentScreen = Screen.Room }
-            )
             Screen.Configuration -> ConfigurationScreen(
-                onGoBack = { currentScreen = Screen.Home }
+                onGoBack = { currentScreen = Screen.Room }
             )
             Screen.Room -> RoomScreen(
-                onOpenHome = { currentScreen = Screen.Home }
+                onOpenConfiguration = { currentScreen = Screen.Configuration },
             )
         }
     }

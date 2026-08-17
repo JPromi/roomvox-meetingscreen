@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +47,7 @@ import kotlin.time.Clock
 
 @Composable
 fun RoomScreen(
-    onOpenHome: () -> Unit,
+    onOpenConfiguration: () -> Unit,
     appSettings: AppSettings = remember { AppSettings() },
     roomVoxService: RoomVoxService = remember { RoomVoxService(appSettings) },
 ) {
@@ -56,12 +57,16 @@ fun RoomScreen(
     var isLoadingRoom by remember { mutableStateOf(true) }
     var isLoadingAvailability by remember { mutableStateOf(true) }
     var currentMinuteOfDay by remember { mutableStateOf(0) }
+    var currentTimeText by remember { mutableStateOf("--:--") }
+    var currentDateText by remember { mutableStateOf("--.--.----") }
 
     LaunchedEffect(Unit) {
         while (true) {
             val now = Clock.System.now()
                 .toLocalDateTime(TimeZone.currentSystemDefault())
             currentMinuteOfDay = now.hour * 60 + now.minute
+            currentTimeText = "${now.hour.twoDigits()}:${now.minute.twoDigits()}"
+            currentDateText = "${now.day.twoDigits()}.${(now.month.ordinal + 1).twoDigits()}.${now.year}"
             delay(30_000)
         }
     }
@@ -121,8 +126,17 @@ fun RoomScreen(
         ) {
             // Datetime
             Column {
-                Text(text = "14:33", modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.W500, fontSize = 50.sp)
-                Text("31.01.2026", fontWeight = FontWeight.W400, fontSize = 20.sp)
+                Text(
+                    text = currentTimeText,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    fontWeight = FontWeight.W500,
+                    fontSize = 50.sp,
+                )
+                Text(
+                    text = currentDateText,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 20.sp,
+                )
             }
 
             // Name & Status
@@ -151,8 +165,8 @@ fun RoomScreen(
 
             // Settings
             Row(modifier = Modifier.align(Alignment.End)) {
-                Button(onClick = onOpenHome) {
-                    Text("Home")
+                Button(onClick = onOpenConfiguration) {
+                    Text("Einstellungen")
                 }
             }
         }
@@ -160,88 +174,108 @@ fun RoomScreen(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(3f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // Text(text = "Termine", modifier = Modifier.padding(bottom = 4.dp))
-            if (isLoadingAvailability) {
-                CircularProgressIndicator()
-            } else {
-                val slots = roomAvailability?.slots.orEmpty().filter { slot ->
-                    timeToMinutes(slot.end) > currentMinuteOfDay
-                }
 
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                ) {
-                    val spacing = 6.dp
-                    val totalSpacing = spacing * (slots.size - 1).coerceAtLeast(0)
-                    val availableSlotHeight = maxOf(0.dp, maxHeight - totalSpacing)
-                    val durations = slots.map {
-                        getWeightFromTime(it.start, it.end).coerceAtLeast(1L)
+            // Slots
+            Column (modifier = Modifier.fillMaxHeight().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (isLoadingAvailability) {
+                    CircularProgressIndicator()
+                } else {
+                    val slots = roomAvailability?.slots.orEmpty().filter { slot ->
+                        timeToMinutes(slot.end) > currentMinuteOfDay
                     }
-                    val slotHeights = calculateSlotHeights(
-                        availableHeight = availableSlotHeight,
-                        durations = durations,
-                        minHeight = 50.dp,
-                    )
 
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(spacing),
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     ) {
-                        slots.forEachIndexed { index, slot ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(slotHeights[index])
-                                    .background(
-                                        Color(0x21212120),
-                                        shape = RoundedCornerShape(8.dp),
-                                    )
-                                    .padding(8.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    // Status
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                color = if (slot.status == SlotStatus.busy) {
-                                                    Color.Red
-                                                } else {
-                                                    Color.Green
-                                                },
-                                                shape = RoundedCornerShape(6.dp)
-                                            )
-                                            .padding(vertical = 2.dp, horizontal = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = slot.status.toString(),
-                                            color = Color.Black,
+                        val spacing = 6.dp
+                        val totalSpacing = spacing * (slots.size - 1).coerceAtLeast(0)
+                        val availableSlotHeight = maxOf(0.dp, maxHeight - totalSpacing)
+                        val durations = slots.map {
+                            getWeightFromTime(it.start, it.end).coerceAtLeast(1L)
+                        }
+                        val slotHeights = calculateSlotHeights(
+                            availableHeight = availableSlotHeight,
+                            durations = durations,
+                            minHeight = 70.dp,
+                        )
+
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(spacing),
+                        ) {
+                            slots.forEachIndexed { index, slot ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(slotHeights[index])
+                                        .background(
+                                            Color(0x21212120),
+                                            shape = RoundedCornerShape(8.dp),
                                         )
+                                        .padding(8.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Status
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    color = if (slot.status == SlotStatus.busy) {
+                                                        Color.Red
+                                                    } else {
+                                                        Color.Green
+                                                    },
+                                                    shape = RoundedCornerShape(6.dp)
+                                                )
+                                                .padding(vertical = 2.dp, horizontal = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = slot.status.toString(),
+                                                color = Color.Black,
+                                            )
+                                        }
+
+                                        // Time
+                                        Text("${slot.start} - ${slot.end}")
                                     }
 
-                                    // Time
-                                    Text("${slot.start} - ${slot.end}")
+
+                                    // Title
+                                    Text(
+                                        text = if (slot.status == SlotStatus.busy) {
+                                            slot.title ?: "Belegt"
+                                        } else {
+                                            "Frei"
+                                        },
+                                    )
                                 }
-
-
-                                // Title
-                                Text(
-                                    text = if (slot.status == SlotStatus.busy) {
-                                        slot.title ?: "Belegt"
-                                    } else {
-                                        "Frei"
-                                    },
-                                )
                             }
                         }
                     }
                 }
             }
+
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.LightGray,
+                    contentColor = Color.Black,
+                    disabledContainerColor = Color.Gray,
+                    disabledContentColor = Color.DarkGray,
+                ),
+                onClick = onOpenConfiguration
+            ) {
+                Text("Neuer Termin")
+            }
+
         }
     }
 }
@@ -297,3 +331,5 @@ private fun timeToMinutes(time: String): Int {
     val minute = parts.getOrNull(1)?.toIntOrNull() ?: return 0
     return hour * 60 + minute
 }
+
+private fun Int.twoDigits(): String = toString().padStart(2, '0')
