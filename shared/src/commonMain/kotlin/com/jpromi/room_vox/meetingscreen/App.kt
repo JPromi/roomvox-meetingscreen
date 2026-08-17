@@ -21,13 +21,14 @@ fun App() {
 
         when (currentScreen) {
             Screen.Home -> HomeScreen(
-                onOpenConfiguration = { currentScreen = Screen.Configuration }
+                onOpenConfiguration = { currentScreen = Screen.Configuration },
+                onOpenRoom = { currentScreen = Screen.Room }
             )
             Screen.Configuration -> ConfigurationScreen(
                 onGoBack = { currentScreen = Screen.Home }
             )
             Screen.Room -> RoomScreen(
-                onOpenConfiguration = { currentScreen = Screen.Configuration }
+                onOpenHome = { currentScreen = Screen.Home }
             )
         }
     }

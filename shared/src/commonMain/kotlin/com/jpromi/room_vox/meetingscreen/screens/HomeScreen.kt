@@ -7,13 +7,18 @@ import androidx.compose.runtime.Composable
 
 @Composable
 fun HomeScreen(
-    onOpenConfiguration: () -> Unit
+    onOpenConfiguration: () -> Unit,
+    onOpenRoom: () -> Unit
 ) {
     Column {
         Text("Startscreen")
 
         Button(onClick = onOpenConfiguration) {
             Text("Konfiguration öffnen")
+        }
+
+        Button(onClick = onOpenRoom) {
+            Text("Raum öffnen")
         }
     }
 }
