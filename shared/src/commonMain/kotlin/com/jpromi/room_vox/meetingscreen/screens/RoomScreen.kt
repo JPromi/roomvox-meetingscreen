@@ -89,14 +89,18 @@ fun RoomScreen(
 
         // Load room availability
         isLoadingAvailability = true
-        when (val result = roomVoxService.getRoomAvailability(appSettings.selectedRoomId)) {
-            is ApiResult.Success -> roomAvailability = result.data
-            is ApiResult.Error -> {
-                roomAvailability = null
-                errorMessage = result.toUserMessage()
+
+        while (true) {
+            when (val result = roomVoxService.getRoomAvailability(appSettings.selectedRoomId)) {
+                is ApiResult.Success -> roomAvailability = result.data
+                is ApiResult.Error -> {
+                    roomAvailability = null
+                    errorMessage = result.toUserMessage()
+                }
             }
+            isLoadingAvailability = false
+            delay(30_000) // 30 seconds
         }
-        isLoadingAvailability = false
     }
 
     fun getWeightFromTime(startTime: String, endTime: String): Long {
