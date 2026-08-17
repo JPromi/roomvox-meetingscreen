@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jpromi.room_vox.meetingscreen.AppColor
 import com.jpromi.room_vox.meetingscreen.AppSettings
 import com.jpromi.room_vox.meetingscreen.enums.SlotStatus
 import com.jpromi.room_vox.meetingscreen.models.Room
@@ -118,6 +119,7 @@ fun RoomScreen(
     // UI
     Row(
         modifier = Modifier
+            .background(color = AppColor.background)
             .padding(32.dp)
     ) {
         Column(
@@ -131,11 +133,13 @@ fun RoomScreen(
                     modifier = Modifier.padding(bottom = 4.dp),
                     fontWeight = FontWeight.W500,
                     fontSize = 50.sp,
+                    color = AppColor.textColor,
                 )
                 Text(
                     text = currentDateText,
                     fontWeight = FontWeight.W400,
                     fontSize = 20.sp,
+                    color = AppColor.textColor,
                 )
             }
 
@@ -147,6 +151,7 @@ fun RoomScreen(
                         modifier = Modifier.padding(bottom = 4.dp),
                         fontWeight = FontWeight.W500,
                         fontSize = 30.sp,
+                        color = AppColor.textColor,
                     )
                 }
 
@@ -211,7 +216,7 @@ fun RoomScreen(
                                         .fillMaxWidth()
                                         .height(slotHeights[index])
                                         .background(
-                                            Color(0x21212120),
+                                            color = AppColor.slotBackground,
                                             shape = RoundedCornerShape(8.dp),
                                         )
                                         .padding(8.dp),
@@ -226,9 +231,9 @@ fun RoomScreen(
                                             modifier = Modifier
                                                 .background(
                                                     color = if (slot.status == SlotStatus.busy) {
-                                                        Color.Red
+                                                        AppColor.busyTagBackground
                                                     } else {
-                                                        Color.Green
+                                                        AppColor.freeTagBackground
                                                     },
                                                     shape = RoundedCornerShape(6.dp)
                                                 )
@@ -236,12 +241,19 @@ fun RoomScreen(
                                         ) {
                                             Text(
                                                 text = slot.status.toString(),
-                                                color = Color.Black,
+                                                color = if (slot.status == SlotStatus.busy) {
+                                                    AppColor.busyTabTextColor
+                                                } else {
+                                                    AppColor.freeTabTextColor
+                                                },
                                             )
                                         }
 
                                         // Time
-                                        Text("${slot.start} - ${slot.end}")
+                                        Text(
+                                            text = "${slot.start} - ${slot.end}",
+                                            color = AppColor.textColor,
+                                            )
                                     }
 
 
@@ -252,6 +264,7 @@ fun RoomScreen(
                                         } else {
                                             "Frei"
                                         },
+                                        color = AppColor.textColor,
                                     )
                                 }
                             }
