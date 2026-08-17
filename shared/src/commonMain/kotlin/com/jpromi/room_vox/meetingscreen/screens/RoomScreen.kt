@@ -1,8 +1,12 @@
 package com.jpromi.room_vox.meetingscreen.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,23 +14,103 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jpromi.room_vox.meetingscreen.AppSettings
+import com.jpromi.room_vox.meetingscreen.enums.SlotStatus
+import com.jpromi.room_vox.meetingscreen.models.Room
+import com.jpromi.room_vox.meetingscreen.models.RoomAvailability
+import com.jpromi.room_vox.meetingscreen.network.ApiResult
+import com.jpromi.room_vox.meetingscreen.network.RoomVoxService
+import com.jpromi.room_vox.meetingscreen.network.toUserMessage
+import kotlinx.coroutines.delay
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 @Composable
 fun RoomScreen(
     onOpenHome: () -> Unit,
+    appSettings: AppSettings = remember { AppSettings() },
+    roomVoxService: RoomVoxService = remember { RoomVoxService(appSettings) },
 ) {
+    var room by remember { mutableStateOf<Room?>(null) }
+    var roomAvailability by remember { mutableStateOf<RoomAvailability?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoadingRoom by remember { mutableStateOf(true) }
+    var isLoadingAvailability by remember { mutableStateOf(true) }
+    var currentMinuteOfDay by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = Clock.System.now()
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+            currentMinuteOfDay = now.hour * 60 + now.minute
+            delay(30_000)
+        }
+    }
+
+    LaunchedEffect(appSettings.selectedRoomId) {
+        // Load room details
+        isLoadingRoom = true
+        errorMessage = null
+
+        when (val result = roomVoxService.getRoom(appSettings.selectedRoomId)) {
+            is ApiResult.Success -> room = result.data
+            is ApiResult.Error -> {
+                room = null
+                errorMessage = result.toUserMessage()
+            }
+        }
+        isLoadingRoom = false
+
+        // Load room availability
+        isLoadingAvailability = true
+        when (val result = roomVoxService.getRoomAvailability(appSettings.selectedRoomId)) {
+            is ApiResult.Success -> roomAvailability = result.data
+            is ApiResult.Error -> {
+                roomAvailability = null
+                errorMessage = result.toUserMessage()
+            }
+        }
+        isLoadingAvailability = false
+    }
+
+    fun getWeightFromTime(startTime: String, endTime: String): Long {
+        // time = "HH:mm"
+
+        val startParts = startTime.split(":")
+        val endParts = endTime.split(":")
+
+        val startHour = startParts[0].toIntOrNull() ?: 0
+        val startMinute = startParts[1].toIntOrNull() ?: 0
+
+        val endHour = endParts[0].toIntOrNull() ?: 0
+        val endMinute = endParts[1].toIntOrNull() ?: 0
+
+        val startTotalMinutes = startHour * 60 + startMinute
+        val endTotalMinutes = endHour * 60 + endMinute
+
+        return (endTotalMinutes - startTotalMinutes).toLong()
+    }
+
+    // UI
     Row(
         modifier = Modifier
             .padding(32.dp)
@@ -43,7 +127,14 @@ fun RoomScreen(
 
             // Name & Status
             Column {
-                Text("Lehrsaal", modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.W500, fontSize = 30.sp)
+                when {
+                    room != null -> Text(
+                        text = room?.name.orEmpty(),
+                        modifier = Modifier.padding(bottom = 4.dp),
+                        fontWeight = FontWeight.W500,
+                        fontSize = 30.sp,
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -66,6 +157,143 @@ fun RoomScreen(
             }
         }
 
-        Column(modifier = Modifier.weight(3f)) {}
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(3f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Text(text = "Termine", modifier = Modifier.padding(bottom = 4.dp))
+            if (isLoadingAvailability) {
+                CircularProgressIndicator()
+            } else {
+                val slots = roomAvailability?.slots.orEmpty().filter { slot ->
+                    timeToMinutes(slot.end) > currentMinuteOfDay
+                }
+
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) {
+                    val spacing = 6.dp
+                    val totalSpacing = spacing * (slots.size - 1).coerceAtLeast(0)
+                    val availableSlotHeight = maxOf(0.dp, maxHeight - totalSpacing)
+                    val durations = slots.map {
+                        getWeightFromTime(it.start, it.end).coerceAtLeast(1L)
+                    }
+                    val slotHeights = calculateSlotHeights(
+                        availableHeight = availableSlotHeight,
+                        durations = durations,
+                        minHeight = 50.dp,
+                    )
+
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(spacing),
+                    ) {
+                        slots.forEachIndexed { index, slot ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(slotHeights[index])
+                                    .background(
+                                        Color(0x21212120),
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .padding(8.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // Status
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                color = if (slot.status == SlotStatus.busy) {
+                                                    Color.Red
+                                                } else {
+                                                    Color.Green
+                                                },
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .padding(vertical = 2.dp, horizontal = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = slot.status.toString(),
+                                            color = Color.Black,
+                                        )
+                                    }
+
+                                    // Time
+                                    Text("${slot.start} - ${slot.end}")
+                                }
+
+
+                                // Title
+                                Text(
+                                    text = if (slot.status == SlotStatus.busy) {
+                                        slot.title ?: "Belegt"
+                                    } else {
+                                        "Frei"
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+private fun calculateSlotHeights(
+    availableHeight: Dp,
+    durations: List<Long>,
+    minHeight: Dp,
+): List<Dp> {
+    if (durations.isEmpty()) return emptyList()
+
+    val minimumTotalHeight = minHeight.value * durations.size
+    if (availableHeight.value < minimumTotalHeight) {
+        return List(durations.size) { minHeight }
+    }
+
+    val heights = MutableList(durations.size) { 0f }
+    val flexibleSlots = durations.indices.toMutableSet()
+    var remainingHeight = availableHeight.value
+
+    while (flexibleSlots.isNotEmpty()) {
+        val remainingDuration = flexibleSlots
+            .sumOf { durations[it].toDouble() }
+            .toFloat()
+
+        val slotsBelowMinimum = flexibleSlots.filter { index ->
+            val proportionalHeight = remainingHeight *
+                (durations[index].toFloat() / remainingDuration)
+            proportionalHeight < minHeight.value
+        }
+
+        if (slotsBelowMinimum.isEmpty()) {
+            flexibleSlots.forEach { index ->
+                heights[index] = remainingHeight *
+                    (durations[index].toFloat() / remainingDuration)
+            }
+            break
+        }
+
+        slotsBelowMinimum.forEach { index ->
+            heights[index] = minHeight.value
+            remainingHeight -= minHeight.value
+            flexibleSlots.remove(index)
+        }
+    }
+
+    return heights.map { it.dp }
+}
+
+private fun timeToMinutes(time: String): Int {
+    val parts = time.split(":")
+    val hour = parts.getOrNull(0)?.toIntOrNull() ?: return 0
+    val minute = parts.getOrNull(1)?.toIntOrNull() ?: return 0
+    return hour * 60 + minute
 }

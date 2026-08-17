@@ -1,5 +1,6 @@
 package com.jpromi.room_vox.meetingscreen.models
 
+import com.jpromi.room_vox.meetingscreen.enums.SlotStatus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -21,6 +22,6 @@ data class AvailabilityRoom(
 data class AvailabilitySlot(
     var start: String,
     var end: String,
-    var status: String,
+    var status: SlotStatus,
     var title: String? = null,
 )

@@ -2,8 +2,12 @@ package com.jpromi.room_vox.meetingscreen.network
 
 import com.jpromi.room_vox.meetingscreen.AppSettings
 import com.jpromi.room_vox.meetingscreen.models.Room
+import com.jpromi.room_vox.meetingscreen.models.RoomAvailability
+import com.jpromi.room_vox.meetingscreen.models.RoomStatus
+import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
@@ -15,26 +19,64 @@ class RoomVoxService(
     val baseUrl: String
         get() = appSettings.serverUrl.toHttpBaseUrl() + "/apps/roomvox/api/v1"
 
-    suspend fun getRooms(): RoomsResult {
+    suspend fun getRooms(): ApiResult<List<Room>> = executeRequest { client ->
+        client.get("$baseUrl/rooms") {
+            addAuthorizationHeader()
+        }.body()
+    }
+
+    suspend fun getRoom(roomId: String): ApiResult<Room> {
+        if (roomId.isBlank()) {
+            return ApiResult.InvalidRequest("Bitte zuerst einen Raum auswählen.")
+        }
+
+        return executeRequest { client ->
+            client.get("$baseUrl/rooms/${roomId.trim()}") {
+                addAuthorizationHeader()
+            }.body()
+        }
+    }
+
+    suspend fun getRoomStatus(roomId: String): ApiResult<RoomStatus> {
+        if (roomId.isBlank()) {
+            return ApiResult.InvalidRequest("Bitte zuerst einen Raum auswählen.")
+        }
+
+        return executeRequest { client ->
+            client.get("$baseUrl/rooms/${roomId.trim()}/status") {
+                addAuthorizationHeader()
+            }.body()
+        }
+    }
+
+    suspend fun getRoomAvailability(roomId: String): ApiResult<RoomAvailability> {
+        if (roomId.isBlank()) {
+            return ApiResult.InvalidRequest("Bitte zuerst einen Raum auswählen.")
+        }
+
+        return executeRequest { client ->
+            client.get("$baseUrl/rooms/${roomId.trim()}/availability") {
+                addAuthorizationHeader()
+            }.body()
+        }
+    }
+
+    private suspend fun <T> executeRequest(
+        request: suspend (HttpClient) -> T,
+    ): ApiResult<T> {
         if (appSettings.serverUrl.isBlank()) {
-            return RoomsResult.InvalidConfiguration
+            return ApiResult.InvalidRequest("Bitte Server-URL eingeben.")
         }
 
         val client = HttpClientFactory.create()
         return try {
-            val response = client.get("$baseUrl/rooms") {
-                if (appSettings.accessToken.isNotBlank()) {
-                    bearerAuth(appSettings.accessToken.trim())
-                }
-            }
-
-            RoomsResult.Success(response.body())
+            ApiResult.Success(request(client))
         } catch (error: ResponseException) {
             when (error.response.status) {
-                HttpStatusCode.Unauthorized -> RoomsResult.Unauthorized
-                HttpStatusCode.Forbidden -> RoomsResult.Forbidden
-                HttpStatusCode.NotFound -> RoomsResult.NotFound
-                else -> RoomsResult.HttpError(
+                HttpStatusCode.Unauthorized -> ApiResult.Unauthorized
+                HttpStatusCode.Forbidden -> ApiResult.Forbidden
+                HttpStatusCode.NotFound -> ApiResult.NotFound
+                else -> ApiResult.HttpError(
                     statusCode = error.response.status.value,
                     message = error.message ?: error.response.status.description,
                 )
@@ -42,24 +84,17 @@ class RoomVoxService(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            RoomsResult.NetworkError(error)
+            ApiResult.NetworkError(error)
         } finally {
             client.close()
         }
     }
-}
 
-sealed interface RoomsResult {
-    data class Success(val rooms: List<Room>) : RoomsResult
-    data object InvalidConfiguration : RoomsResult
-    data object Unauthorized : RoomsResult
-    data object Forbidden : RoomsResult
-    data object NotFound : RoomsResult
-    data class HttpError(
-        val statusCode: Int,
-        val message: String,
-    ) : RoomsResult
-    data class NetworkError(val cause: Throwable) : RoomsResult
+    private fun HttpRequestBuilder.addAuthorizationHeader() {
+        if (appSettings.accessToken.isNotBlank()) {
+            bearerAuth(appSettings.accessToken.trim())
+        }
+    }
 }
 
 fun String.toHttpBaseUrl(): String {

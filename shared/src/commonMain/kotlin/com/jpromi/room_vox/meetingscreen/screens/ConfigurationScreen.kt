@@ -23,9 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jpromi.room_vox.meetingscreen.AppSettings
 import com.jpromi.room_vox.meetingscreen.models.Room
+import com.jpromi.room_vox.meetingscreen.network.ApiResult
 import com.jpromi.room_vox.meetingscreen.network.RoomVoxService
-import com.jpromi.room_vox.meetingscreen.network.RoomsResult
 import com.jpromi.room_vox.meetingscreen.network.ServerConnectionResult
+import com.jpromi.room_vox.meetingscreen.network.toUserMessage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -87,9 +88,9 @@ fun ConfigurationScreen(
                     isCheckingServer = true
                     serverCheckResult = null
                     serverCheckResult = when (val result = roomVoxService.getRooms()) {
-                        is RoomsResult.Success -> {
+                        is ApiResult.Success -> {
                             rooms.clear()
-                            rooms.addAll(result.rooms)
+                            rooms.addAll(result.data)
                             if (rooms.none { it.id == selectedRoomId }) {
                                 selectedRoomId = ""
                                 appSettings.selectedRoomId = ""
@@ -98,30 +99,8 @@ fun ConfigurationScreen(
                                 "Verbindung OK. ${rooms.size} Räume gefunden."
                             )
                         }
-                        RoomsResult.InvalidConfiguration -> {
-                            ServerConnectionResult.Error("Bitte Server-URL eingeben.")
-                        }
-                        RoomsResult.Unauthorized -> {
-                            // Hier kann z. B. ein Login-Dialog geöffnet werden.
-                            ServerConnectionResult.Error("Der Access Token ist ungültig.")
-                        }
-                        RoomsResult.Forbidden -> {
-                            // Hier kann z. B. auf fehlende Berechtigungen hingewiesen werden.
-                            ServerConnectionResult.Error("Keine Berechtigung zum Abrufen der Räume.")
-                        }
-                        RoomsResult.NotFound -> {
-                            // Hier kann z. B. eine abweichende Server-URL vorgeschlagen werden.
-                            ServerConnectionResult.Error("Die RoomVox-API wurde auf diesem Server nicht gefunden.")
-                        }
-                        is RoomsResult.HttpError -> {
-                            ServerConnectionResult.Error(
-                                "Serverfehler ${result.statusCode}: ${result.message}"
-                            )
-                        }
-                        is RoomsResult.NetworkError -> {
-                            ServerConnectionResult.Error(
-                                result.cause.message ?: "Server nicht erreichbar."
-                            )
+                        is ApiResult.Error -> {
+                            ServerConnectionResult.Error(result.toUserMessage())
                         }
                     }
                     isCheckingServer = false
