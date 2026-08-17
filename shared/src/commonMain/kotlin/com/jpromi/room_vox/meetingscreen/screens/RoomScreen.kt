@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -119,6 +120,7 @@ fun RoomScreen(
     // UI
     Row(
         modifier = Modifier
+            .fillMaxSize()
             .background(color = AppColor.background)
             .padding(32.dp)
     ) {
@@ -127,7 +129,7 @@ fun RoomScreen(
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             // Datetime
-            Column {
+            Column (modifier = Modifier.weight(1f)) {
                 Text(
                     text = currentTimeText,
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -144,7 +146,7 @@ fun RoomScreen(
             }
 
             // Name & Status
-            Column {
+            Column (modifier = Modifier.weight(1f)) {
                 when {
                     room != null -> Text(
                         text = room?.name.orEmpty(),
@@ -169,7 +171,12 @@ fun RoomScreen(
             }
 
             // Settings
-            Row(modifier = Modifier.align(Alignment.End)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
                 Button(onClick = onOpenConfiguration) {
                     Text("Einstellungen")
                 }
