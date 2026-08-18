@@ -3,7 +3,7 @@ package com.jpromi.room_vox.meetingscreen
 import androidx.compose.ui.graphics.Color
 
 object AppColor {
-    val background = Color(0xff212121)
+    val background = Color(0xff05152C)
     val textColor = Color(0xffffffff)
     val slotBackground = Color(0x20f5f5f5)
 

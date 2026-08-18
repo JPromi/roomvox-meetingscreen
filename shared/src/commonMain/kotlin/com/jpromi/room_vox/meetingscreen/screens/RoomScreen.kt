@@ -40,6 +40,7 @@ import com.jpromi.room_vox.meetingscreen.elements.AdminPinPopup
 import com.jpromi.room_vox.meetingscreen.enums.SlotStatus
 import com.jpromi.room_vox.meetingscreen.models.Room
 import com.jpromi.room_vox.meetingscreen.models.RoomAvailability
+import com.jpromi.room_vox.meetingscreen.models.RoomStatus
 import com.jpromi.room_vox.meetingscreen.network.ApiResult
 import com.jpromi.room_vox.meetingscreen.network.RoomVoxService
 import com.jpromi.room_vox.meetingscreen.network.toUserMessage
@@ -54,7 +55,7 @@ fun RoomScreen(
     appSettings: AppSettings = remember { AppSettings() },
     roomVoxService: RoomVoxService = remember { RoomVoxService(appSettings) },
 ) {
-    var room by remember { mutableStateOf<Room?>(null) }
+    var roomStatus by remember { mutableStateOf<RoomStatus?>(null) }
     var roomAvailability by remember { mutableStateOf<RoomAvailability?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoadingRoom by remember { mutableStateOf(true) }
@@ -64,6 +65,7 @@ fun RoomScreen(
     var currentDateText by remember { mutableStateOf("--.--.----") }
 
     var isAdminPinPopupVisible by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -77,23 +79,19 @@ fun RoomScreen(
     }
 
     LaunchedEffect(appSettings.selectedRoomId) {
-        // Load room details
         isLoadingRoom = true
-        errorMessage = null
-
-        when (val result = roomVoxService.getRoom(appSettings.selectedRoomId)) {
-            is ApiResult.Success -> room = result.data
-            is ApiResult.Error -> {
-                room = null
-                errorMessage = result.toUserMessage()
-            }
-        }
-        isLoadingRoom = false
-
-        // Load room availability
         isLoadingAvailability = true
 
         while (true) {
+            when (val result = roomVoxService.getRoomStatus(appSettings.selectedRoomId)) {
+                is ApiResult.Success -> roomStatus = result.data
+                is ApiResult.Error -> {
+                    roomStatus = null
+                    errorMessage = result.toUserMessage()
+                }
+            }
+            isLoadingRoom = false
+
             when (val result = roomVoxService.getRoomAvailability(appSettings.selectedRoomId)) {
                 is ApiResult.Success -> roomAvailability = result.data
                 is ApiResult.Error -> {
@@ -154,15 +152,13 @@ fun RoomScreen(
 
             // Name & Status
             Column (modifier = Modifier.weight(1f)) {
-                when {
-                    room != null -> Text(
-                        text = room?.name.orEmpty(),
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        fontWeight = FontWeight.W500,
-                        fontSize = 30.sp,
-                        color = AppColor.textColor,
-                    )
-                }
+                Text(
+                    text = roomStatus?.room?.name ?: "",
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    fontWeight = FontWeight.W500,
+                    fontSize = 30.sp,
+                    color = AppColor.textColor,
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -173,7 +169,10 @@ fun RoomScreen(
                         .height(50.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Frei")
+                    Text(
+                        text = if (roomStatus?.currentBooking != null) "Belegt" else "Frei",
+                        color = AppColor.textColor,
+                    )
                 }
             }
 
