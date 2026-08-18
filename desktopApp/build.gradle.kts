@@ -21,7 +21,8 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.jpromi.room_vox.meetingscreen"
+            packageName = "RoomVox MeetingScreen"
+            description = "Display RoomVox data"
             packageVersion = "1.0.0"
         }
     }
