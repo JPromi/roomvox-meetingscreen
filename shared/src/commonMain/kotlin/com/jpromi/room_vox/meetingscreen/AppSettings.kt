@@ -17,6 +17,13 @@ class AppSettings(
             settings.putString(KEY_ACCESS_TOKEN, value)
         }
 
+    var accessTokenPermission: String
+        // read, book, admin
+        get() = settings.getString(KEY_ACCESS_TOKEN_PERMISSION, "")
+        set(value) {
+            settings.putString(KEY_ACCESS_TOKEN_PERMISSION, value)
+        }
+
     var adminPin: String
         get() = settings.getString(KEY_ADMIN_PIN, "")
         set(value) {
@@ -32,6 +39,7 @@ class AppSettings(
     private companion object {
         const val KEY_SERVER_URL = "server_url"
         const val KEY_ACCESS_TOKEN = "access_token"
+        const val KEY_ACCESS_TOKEN_PERMISSION = "access_token_permission"
         const val KEY_SELECTED_ROOM_ID = "selected_room_id"
         const val KEY_ADMIN_PIN = "admin_pin"
     }
