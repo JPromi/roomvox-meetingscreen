@@ -293,20 +293,22 @@ fun RoomScreen(
                 }
             }
 
-            Button(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.LightGray,
-                    contentColor = Color.Black,
-                    disabledContainerColor = Color.Gray,
-                    disabledContentColor = Color.DarkGray,
-                ),
-                onClick = onOpenConfiguration
-            ) {
-                Text("Neuer Termin")
+            if (appSettings.showAddEvent) {
+                Button(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.LightGray,
+                        contentColor = Color.Black,
+                        disabledContainerColor = Color.Gray,
+                        disabledContentColor = Color.DarkGray,
+                    ),
+                    onClick = onOpenConfiguration
+                ) {
+                    Text("Neuer Termin")
+                }
             }
 
         }

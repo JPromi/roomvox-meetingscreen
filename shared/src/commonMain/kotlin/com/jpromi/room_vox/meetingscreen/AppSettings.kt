@@ -36,11 +36,18 @@ class AppSettings(
             settings.putString(KEY_SELECTED_ROOM_ID, value)
         }
 
+    var showAddEvent: Boolean
+        get() = settings.getBoolean(KEY_SHOW_ADD_EVENT, false)
+        set(value) {
+            settings.putBoolean(KEY_SHOW_ADD_EVENT, value)
+        }
+
     private companion object {
         const val KEY_SERVER_URL = "server_url"
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_ACCESS_TOKEN_PERMISSION = "access_token_permission"
         const val KEY_SELECTED_ROOM_ID = "selected_room_id"
+        const val KEY_SHOW_ADD_EVENT = "selected_show_add_event"
         const val KEY_ADMIN_PIN = "admin_pin"
     }
 }

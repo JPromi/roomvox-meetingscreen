@@ -11,6 +11,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -159,6 +160,18 @@ fun ConfigurationScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+
+        // settings
+        var showAddEvent by remember { mutableStateOf(appSettings.showAddEvent) }
+
+        Switch(
+            checked = showAddEvent,
+            onCheckedChange = {
+                showAddEvent = it
+                appSettings.showAddEvent = it
+            },
+        )
+        Text("Show Add Event")
 
         // Admin Pin configuration
         var adminPin by remember { mutableStateOf(appSettings.adminPin) }
