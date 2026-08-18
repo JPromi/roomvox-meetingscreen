@@ -108,5 +108,5 @@ fun String.toHttpBaseUrl(): String {
         return trimmedUrl
     }
 
-    return "http://$trimmedUrl"
+    return "https://$trimmedUrl"
 }
