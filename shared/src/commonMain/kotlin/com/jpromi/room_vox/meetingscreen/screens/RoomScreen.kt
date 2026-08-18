@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jpromi.room_vox.meetingscreen.AppColor
 import com.jpromi.room_vox.meetingscreen.AppSettings
+import com.jpromi.room_vox.meetingscreen.elements.AdminPinPopup
 import com.jpromi.room_vox.meetingscreen.enums.SlotStatus
 import com.jpromi.room_vox.meetingscreen.models.Room
 import com.jpromi.room_vox.meetingscreen.models.RoomAvailability
@@ -61,6 +62,8 @@ fun RoomScreen(
     var currentMinuteOfDay by remember { mutableStateOf(0) }
     var currentTimeText by remember { mutableStateOf("--:--") }
     var currentDateText by remember { mutableStateOf("--.--.----") }
+
+    var isAdminPinPopupVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -181,7 +184,13 @@ fun RoomScreen(
                     .weight(1f),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Button(onClick = onOpenConfiguration) {
+                Button(
+                    onClick = if (appSettings.adminPin.isNotEmpty()) {
+                        { isAdminPinPopupVisible = true }
+                    } else {
+                        onOpenConfiguration
+                    }
+                ) {
                     Text("Einstellungen")
                 }
             }
@@ -301,6 +310,15 @@ fun RoomScreen(
             }
 
         }
+    }
+
+    if (isAdminPinPopupVisible) {
+        AdminPinPopup(
+            onValidPinEnteredFunction = {
+                onOpenConfiguration()
+            },
+            onDismiss = { isAdminPinPopupVisible = false }
+        )
     }
 }
 

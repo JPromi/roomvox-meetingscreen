@@ -160,6 +160,20 @@ fun ConfigurationScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
+        // Admin Pin configuration
+        var adminPin by remember { mutableStateOf(appSettings.adminPin) }
+
+        OutlinedTextField(
+            value = adminPin,
+            onValueChange = {
+                adminPin = it
+                appSettings.adminPin = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Admin PIN") },
+            singleLine = true,
+        )
+
         Button(onClick = onGoBack) {
             Text("Zurueck")
         }
